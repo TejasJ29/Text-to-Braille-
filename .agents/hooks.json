@@ -1,0 +1,17 @@
+{
+  "bug-hunter-sentry": {
+    "enabled": true,
+    "PostToolUse": [
+      {
+        "matcher": "replace_file_content|write_to_file|multi_replace_file_content",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node .agents/skills/bug-hunter/scripts/hook-runner.js",
+            "timeout": 15
+          }
+        ]
+      }
+    ]
+  }
+}

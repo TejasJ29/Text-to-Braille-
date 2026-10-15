@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Text to Braille 2.0 — Tactile Simulator</title>
+  <meta name="description" content="A beautiful, interactive Text-to-Braille translator with real-time tactile cell visualization, audio feedback, and learning tools." />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ================================================================
+       DESIGN SYSTEM — Txt-to-Braille 2.0
+       A warm, accessible, glassmorphic dark theme with aurora accents
+       ================================================================ */
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg-deep: #06080e;
+      --bg-surface: #0b0f1a;
+      --bg-card: rgba(14, 19, 32, 0.78);
+      --bg-card-hover: rgba(20, 26, 44, 0.85);
+      --border-subtle: rgba(100, 116, 160, 0.14);
+      --border-active: rgba(99, 179, 237, 0.45);
+
+      --text-primary: #e8edf5;
+      --text-secondary: #8b95ad;
+      --text-muted: #556078;
+
+      --accent-blue: #60a5fa;
+      --accent-cyan: #22d3ee;
+      --accent-violet: #a78bfa;
+      --accent-amber: #fbbf24;
+      --accent-emerald: #34d399;
+      --accent-rose: #fb7185;
+
+      --glow-blue: 0 0 20px rgba(96, 165, 250, 0.2);
+      --glow-cyan: 0 0 20px rgba(34, 211, 238, 0.2);
+      --glow-violet: 0 0 20px rgba(167, 139, 250, 0.2);
+
+      --radius-sm: 8px;
+      --radius-md: 14px;
+      --radius-lg: 20px;
+      --radius-xl: 28px;
+
+      --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', 'Fira Code', monospace;
+
+      --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-smooth: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+      --transition-spring: 500ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      font-family: var(--font-sans);
+      background: var(--bg-deep);
+      color: var(--text-primary);
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* Aurora background animation */
+    body::before {
+      content: '';
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      z-index: 0;
+      background:
+        radial-gradient(ellipse 80% 60% at 10% 20%, rgba(96, 165, 250, 0.06) 0%, transparent 60%),
+        radial-gradient(ellipse 60% 80% at 90% 80%, rgba(167, 139, 250, 0.05) 0%, transparent 55%),
+        radial-gradient(ellipse 50% 40% at 50% 50%, rgba(34, 211, 238, 0.03) 0%, transparent 50%);
+      pointer-events: none;
+      animation: auroraShift 20s ease-in-out infinite alternate;
+    }
+
+    @keyframes auroraShift {
+      0%   { opacity: 1; transform: scale(1); }
+      50%  { opacity: 0.7; transform: scale(1.05) rotate(1deg); }
+      100% { opacity: 1; transform: scale(1) rotate(-1deg); }
+    }
+
+    /* Glassmorphic card */
+    .glass {
+      background: var(--bg-card);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+    }
+    .glass:hover {
+      border-color: var(--border-active);
+    }
+
+    /* ================================================================
+       LAYOUT
+       ================================================================ */
+    .app-container {
+      position: relative;
+      z-index: 1;
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 28px 24px 60px;
+    }
+
+    /* HEADER */
+    .app-header {
+      text-align: center;
+      margin-bottom: 40px;
+      animation: fadeInDown 0.7s ease-out;
+    }
+
+    .app-header h1 {
+      font-size: 2.6rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet), var(--accent-cyan));
+      background-size: 200% 200%;
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      animation: gradientFlow 6s ease infinite;
+    }
+    .app-header .subtitle {
+      font-size: 1rem;
+      color: var(--text-secondary);
+      margin-top: 8px;
+      font-weight: 400;
+    }
+    .app-header .version-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      margin-top: 14px;
+      padding: 5px 14px;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--accent-cyan);
+      border: 1px solid rgba(34, 211, 238, 0.25);
+      border-radius: 100px;
+      background: rgba(34, 211, 238, 0.06);
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+    .version-badge .dot {
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: var(--accent-emerald);
+      box-shadow: 0 0 8px var(--accent-emerald);
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes gradientFlow {
+      0%, 100% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    @keyframes fadeInDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes fadeInUp {
+      from { opacity: 0; transform: translateY(24px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.92); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    /* MAIN GRID LAYOUT */
+    .main-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      animation: fadeInUp 0.6s ease-out 0.1s both;
+    }
+
+    /* INPUT PANEL */
+    .input-panel {
+      padding: 28px;
+    }
+    .panel-label {
+      font-size: 0.7rem;
+      font-weight: 700;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .panel-label .icon { font-size: 0.9rem; }
+
+    .text-input {
+      width: 100%;
+      min-height: 150px;
+      padding: 18px;
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      background: rgba(6, 8, 14, 0.6);
+      color: var(--text-primary);
+      font-family: var(--font-sans);
+      font-size: 1.05rem;
+      line-height: 1.6;
+      resize: vertical;
+      outline: none;
+      transition: border-color var(--transition-smooth), box-shadow var(--transition-smooth);
+    }
+    .text-input:focus {
+      border-color: var(--accent-blue);
+      box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.12);
+    }
+    .text-input::placeholder { color: var(--text-muted); }
+
+    /* Quick sample chips */
+    .sample-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 14px;
+    }
+    .chip {
+      padding: 6px 14px;
+      font-size: 0.76rem;
+      font-weight: 500;
+      border-radius: 100px;
+      border: 1px solid var(--border-subtle);
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      white-space: nowrap;
+    }
+    .chip:hover {
+      background: rgba(96, 165, 250, 0.1);
+      border-color: var(--accent-blue);
+      color: var(--accent-blue);
+      transform: translateY(-1px);
+    }
+
+    /* Action Bar */
+    .action-bar {
+      display: flex;
+      gap: 10px;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 11px 22px;
+      font-family: var(--font-sans);
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: none;
+      cursor: pointer;
+      transition: all var(--transition-fast);
+      outline: none;
+    }
+    .btn:active { transform: scale(0.97); }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-blue), var(--accent-violet));
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(96, 165, 250, 0.25);
+    }
+    .btn-primary:hover {
+      box-shadow: 0 6px 28px rgba(96, 165, 250, 0.4);
+      transform: translateY(-1px);
+    }
+    .btn-secondary {
+      background: rgba(100, 116, 160, 0.1);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+    }
+    .btn-secondary:hover {
+      background: rgba(100, 116, 160, 0.18);
+      color: var(--text-primary);
+    }
+
+    /* Stats row */
+    .stats-row {
+      display: flex;
+      gap: 16px;
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }
+    .stat-item {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .stat-item .val {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 1.1rem;
+    }
+    .stat-item .val.blue { color: var(--accent-blue); }
+    .stat-item .val.violet { color: var(--accent-violet); }
+    .stat-item .val.amber { color: var(--accent-amber); }
+    .stat-item .val.emerald { color: var(--accent-emerald); }
+
+    /* OUTPUT PANEL — Braille Unicode Display */
+    .output-panel {
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .braille-output-box {
+      flex: 1;
+      min-height: 150px;
+      padding: 20px;
+      border-radius: var(--radius-sm);
+      background: rgba(6, 8, 14, 0.5);
+      border: 1px solid var(--border-subtle);
+      font-size: 2.2rem;
+      line-height: 1.6;
+      letter-spacing: 0.15em;
+      color: var(--accent-cyan);
+      word-break: break-all;
+      overflow-y: auto;
+      font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', serif;
+      transition: border-color var(--transition-smooth);
+    }
+    .braille-output-box:empty::after {
+      content: 'Braille output will appear here...';
+      color: var(--text-muted);
+      font-size: 0.95rem;
+      font-family: var(--font-sans);
+      letter-spacing: 0;
+    }
+
+    .copy-row {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    /* ================================================================
+       TACTILE CELL VISUALIZER — Full Width Section
+       ================================================================ */
+    .visualizer-section {
+      margin-top: 28px;
+      animation: fadeInUp 0.6s ease-out 0.2s both;
+    }
+
+    .cell-strip-wrapper {
+      padding: 24px;
+      overflow-x: auto;
+    }
+
+    .cell-strip {
+      display: flex;
+      gap: 6px;
+      padding-bottom: 8px;
+    }
+
+    /* Individual Braille cell */
+    .braille-cell {
+      flex-shrink: 0;
+      width: 68px;
+      padding: 10px 0 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(6, 8, 14, 0.5);
+      border: 1.5px solid var(--border-subtle);
+      cursor: pointer;
+      transition: all var(--transition-smooth);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 6px;
+      position: relative;
+    }
+    .braille-cell:hover {
+      border-color: var(--accent-blue);
+      background: rgba(96, 165, 250, 0.06);
+      transform: translateY(-3px);
+      box-shadow: var(--glow-blue);
+    }
+    .braille-cell.active {
+      border-color: var(--accent-cyan);
+      background: rgba(34, 211, 238, 0.08);
+      box-shadow: var(--glow-cyan);
+    }
+    .braille-cell.space-cell {
+      border-style: dashed;
+      opacity: 0.5;
+    }
+
+    /* Dot matrix inside each cell */
+    .dot-matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 4px;
+      width: 28px;
+      height: 42px;
+    }
+    .dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      background: rgba(100, 116, 160, 0.15);
+      border: 1px solid rgba(100, 116, 160, 0.1);
+      transition: all var(--transition-spring);
+      justify-self: center;
+      align-self: center;
+    }
+    .dot.raised {
+      background: var(--accent-cyan);
+      border-color: var(--accent-cyan);
+      box-shadow: 0 0 10px rgba(34, 211, 238, 0.5), 0 0 4px rgba(34, 211, 238, 0.8);
+      transform: scale(1.2);
+    }
+
+    .cell-label {
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-align: center;
+      max-width: 100%;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .cell-unicode {
+      font-size: 1.4rem;
+      line-height: 1;
+      color: var(--accent-violet);
+      font-family: 'Segoe UI Symbol', 'Noto Sans Symbols 2', serif;
+    }
+
+    /* ================================================================
+       CELL INSPECTOR — Detail Panel for selected cell
+       ================================================================ */
+    .inspector-section {
+      margin-top: 24px;
+      animation: fadeInUp 0.6s ease-out 0.3s both;
+    }
+    .inspector-grid {
+      display: grid;
+      grid-template-columns: auto 1fr 1fr;
+      gap: 24px;
+      padding: 28px;
+      align-items: center;
+    }
+
+    .inspector-cell-big {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 10px;
+    }
+    .big-dot-matrix {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      grid-template-rows: 1fr 1fr 1fr;
+      gap: 8px;
+      width: 70px;
+      height: 105px;
+    }
+    .big-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      background: rgba(100, 116, 160, 0.12);
+      border: 2px solid rgba(100, 116, 160, 0.15);
+      transition: all var(--transition-spring);
+      justify-self: center;
+      align-self: center;
+      position: relative;
+    }
+    .big-dot::after {
+      content: attr(data-dot);
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.6rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: transparent;
+      transition: color var(--transition-fast);
+    }
+    .big-dot:hover::after { color: var(--text-muted); }
+    .big-dot.raised {
+      background: var(--accent-cyan);
+      border-color: rgba(34, 211, 238, 0.6);
+      box-shadow: 0 0 18px rgba(34, 211, 238, 0.4), 0 0 6px rgba(34, 211, 238, 0.7);
+      transform: scale(1.1);
+    }
+    .big-dot.raised::after { color: rgba(6, 8, 14, 0.7); }
+
+    .inspector-char {
+      font-size: 3.5rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      text-align: center;
+    }
+
+    .inspector-details {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px 16px;
+    }
+    .detail-item {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .detail-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-muted);
+    }
+    .detail-value {
+      font-family: var(--font-mono);
+      font-size: 0.88rem;
+      font-weight: 600;
+      color: var(--text-primary);
+    }
+
+    .inspector-desc {
+      grid-column: 1 / -1;
+    }
+    .inspector-desc .detail-value {
+      color: var(--text-secondary);
+      font-family: var(--font-sans);
+      font-weight: 400;
+      line-height: 1.5;
+    }
+
+    /* ================================================================
+       PLAYBACK CONTROLS
+       ================================================================ */
+    .playback-bar {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 18px 24px;
+      margin-top: 24px;
+      animation: fadeInUp 0.6s ease-out 0.35s both;
+    }
+
+    .play-btn {
+      width: 52px; height: 52px;
+      border-radius: 50%;
+      border: 2px solid var(--accent-blue);
+      background: rgba(96, 165, 250, 0.1);
+      color: var(--accent-blue);
+      font-size: 1.3rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all var(--transition-fast);
+    }
+    .play-btn:hover {
+      background: rgba(96, 165, 250, 0.2);
+      box-shadow: var(--glow-blue);
+      transform: scale(1.08);
+    }
+    .play-btn.playing {
+      border-color: var(--accent-rose);
+      color: var(--accent-rose);
+      background: rgba(251, 113, 133, 0.1);
+      animation: pulseRing 1.5s ease-in-out infinite;
+    }
+    @keyframes pulseRing {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(251, 113, 133, 0.3); }
+      50% { box-shadow: 0 0 0 10px rgba(251, 113, 133, 0); }
+    }
+
+    .speed-control {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }
+    .speed-select {
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      background: rgba(6, 8, 14, 0.6);
+      color: var(--text-primary);
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      outline: none;
+      cursor: pointer;
+    }
+
+    .progress-bar-container {
+      flex: 1;
+      max-width: 300px;
+      height: 4px;
+      border-radius: 2px;
+      background: rgba(100, 116, 160, 0.15);
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      background: linear-gradient(90deg, var(--accent-blue), var(--accent-cyan));
+      transition: width 200ms linear;
+      width: 0%;
+    }
+
+    /* ================================================================
+       AUDIO TOGGLE
+       ================================================================ */
+    .audio-toggle {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      cursor: pointer;
+      user-select: none;
+    }
+    .audio-toggle input[type="checkbox"] { display: none; }
+    .toggle-track {
+      width: 36px; height: 20px;
+      border-radius: 10px;
+      background: rgba(100, 116, 160, 0.2);
+      position: relative;
+      transition: background var(--transition-fast);
+    }
+    .toggle-track::after {
+      content: '';
+      position: absolute;
+      top: 2px; left: 2px;
+      width: 16px; height: 16px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      transition: transform var(--transition-fast), background var(--transition-fast);
+    }
+    .audio-toggle input:checked + .toggle-track {
+      background: rgba(96, 165, 250, 0.3);
+    }
+    .audio-toggle input:checked + .toggle-track::after {
+      transform: translateX(16px);
+      background: var(--accent-blue);
+    }
+
+    /* ================================================================
+       KEYBOARD SHORTCUT HINTS
+       ================================================================ */
+    .shortcut-bar {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 16px;
+      flex-wrap: wrap;
+    }
+    .shortcut {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+    }
+    kbd {
+      padding: 2px 7px;
+      border-radius: 4px;
+      background: rgba(100, 116, 160, 0.12);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.68rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    /* ================================================================
+       TOAST NOTIFICATIONS
+       ================================================================ */
+    .toast-container {
+      position: fixed;
+      bottom: 24px; right: 24px;
+      z-index: 100;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      padding: 12px 18px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 500;
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-subtle);
+      pointer-events: auto;
+      animation: toastIn 0.4s ease-out;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .toast.info { background: rgba(96, 165, 250, 0.15); color: var(--accent-blue); border-color: rgba(96, 165, 250, 0.3); }
+    .toast.success { background: rgba(52, 211, 153, 0.15); color: var(--accent-emerald); border-color: rgba(52, 211, 153, 0.3); }
+
+    @keyframes toastIn {
+      from { opacity: 0; transform: translateY(12px) scale(0.95); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    /* ================================================================
+       FOOTER
+       ================================================================ */
+    .app-footer {
+      text-align: center;
+      margin-top: 48px;
+      padding: 20px 0;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      border-top: 1px solid var(--border-subtle);
+    }
+    .app-footer a {
+      color: var(--accent-blue);
+      text-decoration: none;
+    }
+
+    /* ================================================================
+       SCROLLBAR
+       ================================================================ */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: rgba(100, 116, 160, 0.2); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: rgba(100, 116, 160, 0.35); }
+
+    /* ================================================================
+       RESPONSIVE
+       ================================================================ */
+    @media (max-width: 800px) {
+      .main-grid { grid-template-columns: 1fr; }
+      .inspector-grid { grid-template-columns: 1fr; }
+      .app-header h1 { font-size: 1.8rem; }
+    }
+
+    /* ================================================================
+       EMPTY STATES
+       ================================================================ */
+    .empty-state {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 40px 20px;
+      color: var(--text-muted);
+      font-size: 0.88rem;
+      gap: 8px;
+    }
+    .empty-state .icon { font-size: 2.4rem; opacity: 0.4; }
+
+    /* Hidden helper */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+<div class="app-container">
+  <!-- ============================================================ -->
+  <!-- HEADER -->
+  <!-- ============================================================ -->
+  <header class="app-header">
+    <h1>Text to Braille</h1>
+    <p class="subtitle">Interactive tactile cell translator & learning simulator</p>
+    <span class="version-badge">
+      <span class="dot"></span>
+      v2.0 — Grade 1 Braille Engine
+    </span>
+  </header>
+
+  <!-- ============================================================ -->
+  <!-- MAIN TWO-COLUMN GRID -->
+  <!-- ============================================================ -->
+  <section class="main-grid">
+    <!-- LEFT: Input Panel -->
+    <div class="input-panel glass" id="inputPanel">
+      <div class="panel-label"><span class="icon">✏️</span> Input Text</div>
+      <textarea
+        id="textInput"
+        class="text-input"
+        placeholder="Type or paste any text here..."
+        spellcheck="false"
+        autofocus
+      >Hello World</textarea>
+
+      <div class="sample-chips" id="sampleChips">
+        <button class="chip" data-text="Hello World">Hello World</button>
+        <button class="chip" data-text="Braille is beautiful">Braille is beautiful</button>
+        <button class="chip" data-text="ABCDEFGHIJ">A – J</button>
+        <button class="chip" data-text="KLMNOPQRST">K – T</button>
+        <button class="chip" data-text="UVWXYZ">U – Z</button>
+        <button class="chip" data-text="0123456789">0 – 9</button>
+        <button class="chip" data-text="The quick brown fox jumps over the lazy dog.">Pangram</button>
+      </div>
+
+      <div class="action-bar">
+        <button class="btn btn-primary" id="btnTranslate">
+          <span>⚡</span> Translate
+        </button>
+        <button class="btn btn-secondary" id="btnClear">
+          <span>🗑️</span> Clear
+        </button>
+        <button class="btn btn-secondary" id="btnSpeakInput">
+          <span>🔊</span> Read Aloud
+        </button>
+      </div>
+
+      <div class="stats-row" id="statsRow">
+        <div class="stat-item"><span class="val blue" id="statChars">0</span> chars</div>
+        <div class="stat-item"><span class="val violet" id="statCells">0</span> cells</div>
+        <div class="stat-item"><span class="val amber" id="statLetters">0</span> letters</div>
+        <div class="stat-item"><span class="val emerald" id="statDigits">0</span> digits</div>
+      </div>
+    </div>
+
+    <!-- RIGHT: Braille Output -->
+    <div class="output-panel glass" id="outputPanel">
+      <div class="panel-label"><span class="icon">⠿</span> Braille Unicode Output</div>
+      <div class="braille-output-box" id="brailleOutput"></div>
+      <div class="copy-row">
+        <button class="btn btn-secondary" id="btnCopyBraille">
+          <span>📋</span> Copy Braille
+        </button>
+        <button class="btn btn-secondary" id="btnCopyDots">
+          <span>📎</span> Copy Dot Notation
+        </button>
+        <button class="btn btn-secondary" id="btnDownload">
+          <span>💾</span> Download .brf
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- TACTILE CELL STRIP -->
+  <!-- ============================================================ -->
+  <section class="visualizer-section" id="visualizerSection">
+    <div class="cell-strip-wrapper glass" id="cellStripWrapper">
+      <div class="panel-label"><span class="icon">🔲</span> Tactile Cell Visualizer <span style="font-weight:400; color:var(--text-muted); margin-left:auto; font-size:0.68rem;" id="cellCountLabel">0 cells</span></div>
+      <div class="cell-strip" id="cellStrip">
+        <div class="empty-state" id="emptyVisualizer">
+          <span class="icon">⠀</span>
+          <span>Translate text to see tactile cells appear here</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============================================================ -->
+  <!-- PLAYBACK BAR -->
+  <!-- ============================================================ -->
+  <div class="playback-bar glass" id="playbackBar">
+    <button class="play-btn" id="btnPlayPause" title="Play / Pause">▶</button>
+    <div class="progress-bar-container">
+      <div class="progress-bar-fill" id="progressFill"></div>
+    </div>
+    <div class="speed-control">
+      <span>Speed:</span>
+      <select class="speed-select" id="speedSelect">
+        <option value="1500">0.5×</option>
+        <option value="900" selected>1×</option>
+        <option value="500">2×</option>
+        <option value="250">4×</option>
+      </select>
+    </div>
+    <label class="audio-toggle" title="Toggle audio click feedback">
+      <input type="checkbox" id="audioToggle" checked>
+      <span class="toggle-track"></span>
+      <span>🔈 Audio</span>
+    </label>
+  </div>
+
+  <!-- ============================================================ -->
+  <!-- CELL INSPECTOR -->
+  <!-- ============================================================ -->
+  <section class="inspector-section" id="inspectorSection">
+    <div class="inspector-grid glass" id="inspectorGrid">
+      <div class="inspector-cell-big" id="inspectorBigCell">
+        <div class="big-dot-matrix" id="bigDotMatrix">
+          <div class="big-dot" data-dot="1"></div>
+          <div class="big-dot" data-dot="4"></div>
+          <div class="big-dot" data-dot="2"></div>
+          <div class="big-dot" data-dot="5"></div>
+          <div class="big-dot" data-dot="3"></div>
+          <div class="big-dot" data-dot="6"></div>
+        </div>
+        <div class="cell-unicode" id="inspectorUnicode" style="font-size:2.5rem;">⠀</div>
+      </div>
+
+      <div style="text-align:center;">
+        <div class="inspector-char" id="inspectorChar">—</div>
+        <div style="font-size:0.75rem; color:var(--text-muted); margin-top:4px;" id="inspectorCategory">Select a cell</div>
+      </div>
+
+      <div class="inspector-details" id="inspectorDetails">
+        <div class="detail-item">
+          <span class="detail-label">Active Dots</span>
+          <span class="detail-value" id="detailDots">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Binary</span>
+          <span class="detail-value" id="detailBinary">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Hex</span>
+          <span class="detail-value" id="detailHex">—</span>
+        </div>
+        <div class="detail-item">
+          <span class="detail-label">Position</span>
+          <span class="detail-value" id="detailPosition">—</span>
+        </div>
+        <div class="detail-item inspector-desc">
+          <span class="detail-label">Description</span>
+          <span class="detail-value" id="detailDesc">Click on any cell in the strip above to inspect its Braille encoding.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- KEYBOARD SHORTCUT HINTS -->
+  <div class="shortcut-bar">
+    <div class="shortcut"><kbd>Enter</kbd> Translate</div>
+    <div class="shortcut"><kbd>Space</kbd> Play / Pause</div>
+    <div class="shortcut"><kbd>←</kbd><kbd>→</kbd> Navigate cells</div>
+    <div class="shortcut"><kbd>Esc</kbd> Clear</div>
+  </div>
+
+  <!-- FOOTER -->
+  <footer class="app-footer">
+    Txt-to-Braille 2.0 — Grade 1 English Braille (EBAE) Simulator &nbsp;•&nbsp;
+    Built for accessibility education &nbsp;•&nbsp;
+    <a href="https://en.wikipedia.org/wiki/Braille" target="_blank" rel="noopener">Learn about Braille ↗</a>
+  </footer>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- ================================================================ -->
+<!-- APPLICATION JAVASCRIPT -->
+<!-- ================================================================ -->
+<script>
+(function () {
+  'use strict';
+
+  // =====================================================================
+  // 1. GRADE 1 BRAILLE TRANSLATION ENGINE
+  // =====================================================================
+  // Dot order: [dot1, dot2, dot3, dot4, dot5, dot6]
+  //   Dot 1 (top-left)      Dot 4 (top-right)
+  //   Dot 2 (mid-left)      Dot 5 (mid-right)
+  //   Dot 3 (bottom-left)   Dot 6 (bottom-right)
+
+  const GRADE1_LETTERS = {
+    'A': [1, 0, 0, 0, 0, 0],
+    'B': [1, 1, 0, 0, 0, 0],
+    'C': [1, 0, 0, 1, 0, 0],
+    'D': [1, 0, 0, 1, 1, 0],
+    'E': [1, 0, 0, 0, 1, 0],
+    'F': [1, 1, 0, 1, 0, 0],
+    'G': [1, 1, 0, 1, 1, 0],
+    'H': [1, 1, 0, 0, 1, 0],
+    'I': [0, 1, 0, 1, 0, 0],
+    'J': [0, 1, 0, 1, 1, 0],
+    'K': [1, 0, 1, 0, 0, 0],
+    'L': [1, 1, 1, 0, 0, 0],
+    'M': [1, 0, 1, 1, 0, 0],
+    'N': [1, 0, 1, 1, 1, 0],
+    'O': [1, 0, 1, 0, 1, 0],
+    'P': [1, 1, 1, 1, 0, 0],
+    'Q': [1, 1, 1, 1, 1, 0],
+    'R': [1, 1, 1, 0, 1, 0],
+    'S': [0, 1, 1, 1, 0, 0],
+    'T': [0, 1, 1, 1, 1, 0],
+    'U': [1, 0, 1, 0, 0, 1],
+    'V': [1, 1, 1, 0, 0, 1],
+    'W': [0, 1, 0, 1, 1, 1],
+    'X': [1, 0, 1, 1, 0, 1],
+    'Y': [1, 0, 1, 1, 1, 1],
+    'Z': [1, 0, 1, 0, 1, 1]
+  };
+
+  const GRADE1_DIGITS = {
+    '1': [1, 0, 0, 0, 0, 0],
+    '2': [1, 1, 0, 0, 0, 0],
+    '3': [1, 0, 0, 1, 0, 0],
+    '4': [1, 0, 0, 1, 1, 0],
+    '5': [1, 0, 0, 0, 1, 0],
+    '6': [1, 1, 0, 1, 0, 0],
+    '7': [1, 1, 0, 1, 1, 0],
+    '8': [1, 1, 0, 0, 1, 0],
+    '9': [0, 1, 0, 1, 0, 0],
+    '0': [0, 1, 0, 1, 1, 0]
+  };
+
+  const GRADE1_PUNCTUATION = {
+    ' ': [0, 0, 0, 0, 0, 0],
+    '.': [0, 1, 0, 0, 1, 1],
+    ',': [0, 1, 0, 0, 0, 0],
+    '!': [0, 1, 1, 0, 1, 0],
+    '?': [0, 1, 1, 0, 0, 1],
+    '-': [0, 0, 1, 0, 0, 1],
+    ':': [0, 1, 0, 0, 1, 0],
+    ';': [0, 1, 1, 0, 0, 0],
+    "'": [0, 0, 1, 0, 0, 0]
+  };
+
+  const CAPITAL_PREFIX_BITS = [0, 0, 0, 0, 0, 1]; // Dot 6
+  const NUMBER_PREFIX_BITS  = [0, 0, 1, 1, 1, 1]; // Dots 3,4,5,6
+
+  function bitsToUnicode(bits) {
+    let offset = 0;
+    for (let i = 0; i < 6; i++) {
+      if (bits[i]) offset |= (1 << i);
+    }
+    return String.fromCodePoint(0x2800 + offset);
+  }
+
+  function bitsToActiveDots(bits) {
+    const a = [];
+    for (let i = 0; i < 6; i++) { if (bits[i]) a.push(i + 1); }
+    return a;
+  }
+
+  function bitsToBinary(bits) { return bits.join(''); }
+
+  function bitsToHex(bits) {
+    let v = 0;
+    for (let i = 0; i < 6; i++) { if (bits[i]) v |= (1 << (5 - i)); }
+    return '0x' + v.toString(16).toUpperCase().padStart(2, '0');
+  }
+
+  // Translator
+  function translate(rawText) {
+    const cells = [];
+    const text = rawText.replace(/\r\n/g, ' ').replace(/\n/g, ' ');
+    let letters = 0, digits = 0, spaces = 0, puncts = 0, unsupported = 0;
+    let inNum = false;
+
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      const upper = ch.toUpperCase();
+      const isUpper = ch >= 'A' && ch <= 'Z';
+      const isLower = ch >= 'a' && ch <= 'z';
+      const isDigit = ch >= '0' && ch <= '9';
+
+      if (isDigit) {
+        if (!inNum) {
+          // Number prefix indicator cell
+          cells.push(makeCell(cells.length + 1, i + 1, '#IND', '⠼', 'INDICATOR', 'Number Indicator (Dots 3,4,5,6)', NUMBER_PREFIX_BITS));
+        }
+        inNum = true;
+        digits++;
+        cells.push(makeCell(cells.length + 1, i + 1, ch, ch, 'NUMBER', 'Digit ' + ch, GRADE1_DIGITS[ch]));
+      } else if (isUpper || isLower) {
+        inNum = false;
+        letters++;
+        if (isUpper) {
+          cells.push(makeCell(cells.length + 1, i + 1, '⠠', '⠠', 'INDICATOR', 'Capital Indicator (Dot 6)', CAPITAL_PREFIX_BITS));
+        }
+        cells.push(makeCell(cells.length + 1, i + 1, ch, ch, 'LETTER', (isUpper ? 'Uppercase ' : 'Lowercase ') + upper, GRADE1_LETTERS[upper]));
+      } else if (GRADE1_PUNCTUATION.hasOwnProperty(ch)) {
+        inNum = false;
+        if (ch === ' ') { spaces++; } else { puncts++; }
+        cells.push(makeCell(cells.length + 1, i + 1, ch, ch === ' ' ? '⎵' : ch, ch === ' ' ? 'SPACE' : 'PUNCTUATION', ch === ' ' ? 'Blank Space' : 'Punctuation: ' + ch, GRADE1_PUNCTUATION[ch]));
+      } else {
+        inNum = false;
+        unsupported++;
+        cells.push(makeCell(cells.length + 1, i + 1, ch, ch, 'UNSUPPORTED', 'Not in Grade 1 table', [0,0,0,0,0,0]));
+      }
+    }
+
+    return { cells, stats: { chars: text.length, cells: cells.length, letters, digits, spaces, puncts, unsupported } };
+  }
+
+  function makeCell(pos, srcIdx, char, display, category, note, bits) {
+    const b = [...bits];
+    return {
+      position: pos,
+      sourceIndex: srcIdx,
+      char, display, category, note, bits: b,
+      binary: bitsToBinary(b),
+      unicode: bitsToUnicode(b),
+      activeDots: bitsToActiveDots(b),
+      hex: bitsToHex(b)
+    };
+  }
+
+  // =====================================================================
+  // 2. APPLICATION STATE
+  // =====================================================================
+  let state = {
+    cells: [],
+    stats: null,
+    selectedIndex: -1,
+    isPlaying: false,
+    playbackTimer: null,
+    speedMs: 900,
+    audioEnabled: true,
+    audioCtx: null
+  };
+
+  // =====================================================================
+  // 3. DOM REFERENCES
+  // =====================================================================
+  const textInput = document.getElementById('textInput');
+  const brailleOutput = document.getElementById('brailleOutput');
+  const cellStrip = document.getElementById('cellStrip');
+  const emptyVis = document.getElementById('emptyVisualizer');
+  const cellCountLabel = document.getElementById('cellCountLabel');
+
+  const statChars = document.getElementById('statChars');
+  const statCells = document.getElementById('statCells');
+  const statLetters = document.getElementById('statLetters');
+  const statDigits = document.getElementById('statDigits');
+
+  const btnTranslate = document.getElementById('btnTranslate');
+  const btnClear = document.getElementById('btnClear');
+  const btnSpeakInput = document.getElementById('btnSpeakInput');
+  const btnCopyBraille = document.getElementById('btnCopyBraille');
+  const btnCopyDots = document.getElementById('btnCopyDots');
+  const btnDownload = document.getElementById('btnDownload');
+  const btnPlayPause = document.getElementById('btnPlayPause');
+  const speedSelect = document.getElementById('speedSelect');
+  const audioToggle = document.getElementById('audioToggle');
+  const progressFill = document.getElementById('progressFill');
+
+  const inspectorChar = document.getElementById('inspectorChar');
+  const inspectorCategory = document.getElementById('inspectorCategory');
+  const inspectorUnicode = document.getElementById('inspectorUnicode');
+  const bigDotMatrix = document.getElementById('bigDotMatrix');
+  const detailDots = document.getElementById('detailDots');
+  const detailBinary = document.getElementById('detailBinary');
+  const detailHex = document.getElementById('detailHex');
+  const detailPosition = document.getElementById('detailPosition');
+  const detailDesc = document.getElementById('detailDesc');
+
+  const sampleChips = document.getElementById('sampleChips');
+  const toastContainer = document.getElementById('toastContainer');
+
+  // =====================================================================
+  // 4. AUDIO ENGINE — Synthesized tactile click
+  // =====================================================================
+  function ensureAudioCtx() {
+    if (!state.audioCtx) {
+      state.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    return state.audioCtx;
+  }
+
+  function playClick(raisedCount) {
+    if (!state.audioEnabled) return;
+    try {
+      const ctx = ensureAudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(800 + raisedCount * 120, now);
+      osc.frequency.exponentialRampToValueAtTime(200, now + 0.08);
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.1);
+    } catch (e) { /* silent */ }
+  }
+
+  // =====================================================================
+  // 5. RENDER FUNCTIONS
+  // =====================================================================
+  function runTranslation() {
+    const text = textInput.value.trim();
+    if (!text) { showToast('Please enter some text first.', 'info'); return; }
+
+    const result = translate(text);
+    state.cells = result.cells;
+    state.stats = result.stats;
+    state.selectedIndex = -1;
+    stopPlayback();
+
+    renderBrailleOutput();
+    renderCellStrip();
+    renderStats();
+    resetInspector();
+    showToast('Translated ' + result.stats.chars + ' characters → ' + result.stats.cells + ' Braille cells', 'success');
+  }
+
+  function renderBrailleOutput() {
+    brailleOutput.textContent = state.cells.map(c => c.unicode).join('');
+  }
+
+  function renderStats() {
+    const s = state.stats;
+    if (!s) return;
+    statChars.textContent = s.chars;
+    statCells.textContent = s.cells;
+    statLetters.textContent = s.letters;
+    statDigits.textContent = s.digits;
+  }
+
+  function renderCellStrip() {
+    cellStrip.innerHTML = '';
+    if (state.cells.length === 0) {
+      cellStrip.appendChild(emptyVis);
+      emptyVis.classList.remove('hidden');
+      cellCountLabel.textContent = '0 cells';
+      return;
+    }
+    emptyVis.classList.add('hidden');
+    cellCountLabel.textContent = state.cells.length + ' cells';
+
+    state.cells.forEach((cell, idx) => {
+      const el = document.createElement('div');
+      el.className = 'braille-cell' + (cell.category === 'SPACE' ? ' space-cell' : '');
+      el.dataset.index = idx;
+
+      // Dot matrix
+      const matrix = document.createElement('div');
+      matrix.className = 'dot-matrix';
+      // Dots are ordered: 1,4,2,5,3,6 in the grid
+      const dotOrder = [0, 3, 1, 4, 2, 5]; // index into bits array
+      dotOrder.forEach(di => {
+        const dot = document.createElement('div');
+        dot.className = 'dot' + (cell.bits[di] ? ' raised' : '');
+        matrix.appendChild(dot);
+      });
+      el.appendChild(matrix);
+
+      // Unicode label
+      const uniLabel = document.createElement('div');
+      uniLabel.className = 'cell-unicode';
+      uniLabel.textContent = cell.unicode;
+      el.appendChild(uniLabel);
+
+      // Character label
+      const charLabel = document.createElement('div');
+      charLabel.className = 'cell-label';
+      charLabel.textContent = cell.display;
+      el.appendChild(charLabel);
+
+      el.addEventListener('click', () => selectCell(idx));
+      cellStrip.appendChild(el);
+    });
+  }
+
+  function selectCell(idx) {
+    if (idx < 0 || idx >= state.cells.length) return;
+    state.selectedIndex = idx;
+
+    // Update active class
+    cellStrip.querySelectorAll('.braille-cell').forEach((el, i) => {
+      el.classList.toggle('active', i === idx);
+    });
+
+    // Scroll into view
+    const activeEl = cellStrip.children[idx];
+    if (activeEl) activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+
+    renderInspector(state.cells[idx]);
+    playClick(state.cells[idx].activeDots.length);
+
+    // Update progress
+    progressFill.style.width = ((idx + 1) / state.cells.length * 100) + '%';
+  }
+
+  function renderInspector(cell) {
+    inspectorChar.textContent = cell.display;
+    inspectorCategory.textContent = cell.category + (cell.category === 'INDICATOR' ? '' : ' • Position ' + cell.position);
+    inspectorUnicode.textContent = cell.unicode;
+
+    const bigDots = bigDotMatrix.querySelectorAll('.big-dot');
+    const dotOrder = [0, 3, 1, 4, 2, 5];
+    bigDots.forEach((el, i) => {
+      el.classList.toggle('raised', cell.bits[dotOrder[i]] === 1);
+    });
+
+    detailDots.textContent = cell.activeDots.length ? cell.activeDots.join(', ') : 'None';
+    detailBinary.textContent = '0b' + cell.binary;
+    detailHex.textContent = cell.hex;
+    detailPosition.textContent = cell.position + ' of ' + state.cells.length;
+    detailDesc.textContent = cell.note;
+  }
+
+  function resetInspector() {
+    inspectorChar.textContent = '—';
+    inspectorCategory.textContent = 'Select a cell';
+    inspectorUnicode.textContent = '⠀';
+    bigDotMatrix.querySelectorAll('.big-dot').forEach(el => el.classList.remove('raised'));
+    detailDots.textContent = '—';
+    detailBinary.textContent = '—';
+    detailHex.textContent = '—';
+    detailPosition.textContent = '—';
+    detailDesc.textContent = 'Click on any cell in the strip above to inspect its Braille encoding.';
+    progressFill.style.width = '0%';
+  }
+
+  // =====================================================================
+  // 6. PLAYBACK ENGINE
+  // =====================================================================
+  function togglePlayback() {
+    if (state.cells.length === 0) { showToast('Translate text first before playing.', 'info'); return; }
+    if (state.isPlaying) { stopPlayback(); } else { startPlayback(); }
+  }
+
+  function startPlayback() {
+    state.isPlaying = true;
+    btnPlayPause.textContent = '⏸';
+    btnPlayPause.classList.add('playing');
+
+    let idx = state.selectedIndex >= 0 ? state.selectedIndex : 0;
+
+    function step() {
+      if (!state.isPlaying || idx >= state.cells.length) {
+        stopPlayback();
+        return;
+      }
+      selectCell(idx);
+      idx++;
+      state.playbackTimer = setTimeout(step, state.speedMs);
+    }
+    step();
+  }
+
+  function stopPlayback() {
+    state.isPlaying = false;
+    clearTimeout(state.playbackTimer);
+    state.playbackTimer = null;
+    btnPlayPause.textContent = '▶';
+    btnPlayPause.classList.remove('playing');
+  }
+
+  // =====================================================================
+  // 7. UTILITY — Toast, Copy, Download, Speech
+  // =====================================================================
+  function showToast(message, type = 'info') {
+    const t = document.createElement('div');
+    t.className = 'toast ' + type;
+    t.textContent = message;
+    toastContainer.appendChild(t);
+    setTimeout(() => { t.style.opacity = '0'; t.style.transform = 'translateY(8px)'; setTimeout(() => t.remove(), 300); }, 2800);
+  }
+
+  function copyToClipboard(text, label) {
+    navigator.clipboard.writeText(text).then(
+      () => showToast('Copied ' + label + ' to clipboard!', 'success'),
+      () => showToast('Copy failed. Please copy manually.', 'info')
+    );
+  }
+
+  function downloadBrf() {
+    if (state.cells.length === 0) return;
+    const brfText = state.cells.map(c => c.unicode).join('');
+    const blob = new Blob([brfText], { type: 'text/plain;charset=utf-8' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'braille-output.brf';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Downloaded braille-output.brf', 'success');
+  }
+
+  function speakText(text) {
+    if (!('speechSynthesis' in window)) { showToast('Speech not supported in this browser.', 'info'); return; }
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9;
+    u.pitch = 1;
+    window.speechSynthesis.speak(u);
+    showToast('Reading aloud...', 'info');
+  }
+
+  // =====================================================================
+  // 8. EVENT BINDINGS
+  // =====================================================================
+  btnTranslate.addEventListener('click', runTranslation);
+
+  btnClear.addEventListener('click', () => {
+    textInput.value = '';
+    state.cells = [];
+    state.stats = null;
+    state.selectedIndex = -1;
+    stopPlayback();
+    brailleOutput.textContent = '';
+    renderCellStrip();
+    statChars.textContent = '0';
+    statCells.textContent = '0';
+    statLetters.textContent = '0';
+    statDigits.textContent = '0';
+    resetInspector();
+    cellCountLabel.textContent = '0 cells';
+    textInput.focus();
+  });
+
+  btnSpeakInput.addEventListener('click', () => {
+    const text = textInput.value.trim();
+    if (text) speakText(text);
+  });
+
+  btnCopyBraille.addEventListener('click', () => {
+    if (state.cells.length === 0) return;
+    copyToClipboard(state.cells.map(c => c.unicode).join(''), 'Braille Unicode');
+  });
+
+  btnCopyDots.addEventListener('click', () => {
+    if (state.cells.length === 0) return;
+    const dotNotation = state.cells.map(c => {
+      if (c.activeDots.length === 0) return '⠀';
+      return c.activeDots.join('');
+    }).join(' ');
+    copyToClipboard(dotNotation, 'dot notation');
+  });
+
+  btnDownload.addEventListener('click', downloadBrf);
+
+  btnPlayPause.addEventListener('click', togglePlayback);
+
+  speedSelect.addEventListener('change', () => {
+    state.speedMs = parseInt(speedSelect.value, 10);
+  });
+
+  audioToggle.addEventListener('change', () => {
+    state.audioEnabled = audioToggle.checked;
+  });
+
+  // Sample chips
+  sampleChips.addEventListener('click', (e) => {
+    const chip = e.target.closest('.chip');
+    if (!chip) return;
+    textInput.value = chip.dataset.text;
+    runTranslation();
+  });
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    // Don't capture if typing in textarea
+    const inTextarea = document.activeElement === textInput;
+
+    if (e.key === 'Enter' && (e.ctrlKey || !inTextarea)) {
+      e.preventDefault();
+      runTranslation();
+    }
+    if (e.key === 'Escape') {
+      e.preventDefault();
+      btnClear.click();
+    }
+    if (e.key === ' ' && !inTextarea) {
+      e.preventDefault();
+      togglePlayback();
+    }
+    if (e.key === 'ArrowRight' && !inTextarea) {
+      e.preventDefault();
+      if (state.cells.length > 0) {
+        const next = Math.min((state.selectedIndex < 0 ? 0 : state.selectedIndex + 1), state.cells.length - 1);
+        selectCell(next);
+      }
+    }
+    if (e.key === 'ArrowLeft' && !inTextarea) {
+      e.preventDefault();
+      if (state.cells.length > 0) {
+        const prev = Math.max((state.selectedIndex <= 0 ? 0 : state.selectedIndex - 1), 0);
+        selectCell(prev);
+      }
+    }
+  });
+
+  // Real-time translation on input (debounced)
+  let debounceTimer = null;
+  textInput.addEventListener('input', () => {
+    clearTimeout(debounceTimer);
+    debounceTimer = setTimeout(() => {
+      if (textInput.value.trim()) runTranslation();
+    }, 400);
+  });
+
+  // =====================================================================
+  // 9. INITIAL RUN
+  // =====================================================================
+  runTranslation();
+
+})();
+</script>
+</body>
+</html>
