@@ -32,27 +32,6 @@ The simulation console:
 
 ---
 
-## 💼 Resume-Ready Highlights (STAR Format)
-
-Add this project to your resume with these copy-pasteable bullet points:
-
-### 🔹 For Embedded Systems & Firmware Roles
-> - **Engineered an ESP32-based refreshable tactile Braille display**, driving 6 push-pull solenoids via a 74HC595 shift register and logic-level MOSFET array over 115200 baud UART.
-> - **Developed a browser-based Hardware-in-the-Loop (HIL) digital twin** utilizing the Web Serial API to stream real-time actuator bitmasks and telemetry between physical MCU hardware and a 3D kinematics simulator.
-> - **Architected solenoid duty cycle and thermal protection firmware algorithms**, enforcing coil cutoff limits to prevent thermal breakdown of miniature electromagnetic actuators.
-
-### 🔹 For Mechatronics, Robotics & Hardware Roles
-> - **Prototyped a low-cost mechatronic refreshable Braille cell**, designing schematics with 74HC595 serial-to-parallel expansion, IRLZ44N MOSFET power switching, and 1N4007 flyback diode protection.
-> - **Created a kinematic digital twin simulation** modeling 3D pin displacement, spring-return dynamics, magnetic coil energisation states, and power dissipation.
-> - **Designed automated QA sentry test suites** auditing translation ground truths, pin matrix bit order, electrical safety limits, and serial telemetry packet framing.
-
-### 🔹 For Software & Web Engineering Roles
-> - **Built an interactive 3D tactile simulator console** using TypeScript, React 18, Tailwind CSS, and Web Audio API to model physical assistive hardware with sub-50ms latency.
-> - **Implemented an end-to-end accessibility pipeline** integrating Tesseract.js OCR, dynamic Screen Capture APIs, Grade 1 Braille parsing, and Web Speech API narration.
-> - **Created a full hardware abstraction layer (HAL)** cleanly isolating simulation loops from physical Web Serial transport, enabling instant hardware testing and continuous integration.
-
----
-
 ## 🔄 End-to-End System Pipeline
 
 ```
@@ -256,7 +235,7 @@ node .agents/skills/bug-hunter/scripts/audit-bugs.js
 ```text
 Text-to-Braille/
 ├── index.html                                         # Root GitHub Pages entrypoint & instant redirect
-├── README.md                                          # Master project documentation & resume reference
+├── README.md                                          # Master project documentation & architecture guide
 ├── AGENTS.md                                          # Workspace QA directives & hardware safety rules
 ├── .gitignore                                         # Git ignore rules for node_modules & build artifacts
 ├── .github/
