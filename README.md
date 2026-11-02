@@ -312,4 +312,4 @@ npm run check-bugs
 
 This project is open-source under the [MIT License](LICENSE). Built with a passion for assistive technology, open hardware, and accessible human-computer interfaces.
 
-*Designed & Developed by **Tejas**.*
+*Designed & Developed by **Tejas Janbandhu**.*
